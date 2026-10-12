@@ -69,3 +69,11 @@ Todo CREATE/READ(by id)/UPDATE(diff)/DELETE grava `ArticleLogEntry` (`Id`, `Time
 - Logs estruturados em JSON (`AddJsonConsole`) na API e no Worker.
 - `GET /health` (usado pelo ALB): RDS, Redis, S3 e DynamoDB.
 - `GET /api/articles/_load?iterations=N`: SHA256 em loop para gerar CPU na demo do Auto Scaling (CPU 70% escala / 25% reduz).
+
+## Parte 2: ALB + Auto Scaling
+
+- **ALB** (HTTP:80) → target group (porta 5000, health check `/health`) → instâncias do **ASG** (min 1, desired 1, max 3) em várias AZs da VPC padrão.
+- **Health check ELB** no ASG: instância não saudável é substituída automaticamente. `/health` valida RDS, Redis, S3 e DynamoDB.
+- **Escala:** alarme CloudWatch CPU média > 70% por 2 min ⇒ +1; < 25% por 2 min ⇒ −1 (políticas simples com cooldown de 300 s).
+- **Sem estado local:** a API é stateless (cache no Redis, arquivos no S3, dados no RDS); cada instância roda também um Worker, e a SQS distribui as mensagens entre eles. Migrations concorrentes são serializadas pelo lock do EF.
+- **Rede:** `sg-alb` aceita 80 da internet; `sg-ec2` aceita 5000 só do `sg-alb`.

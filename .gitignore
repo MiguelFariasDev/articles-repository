@@ -32,3 +32,11 @@ frontend/dist/
 frontend/coverage/
 *.tsbuildinfo
 npm-debug.log*
+
+# Rider
+*.DotSettings.user
+.run/
+
+# Segredos gerados pelos scripts de infra
+infra/.state.env
+infra/.state.env.tmp

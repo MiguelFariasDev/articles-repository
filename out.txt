@@ -1,0 +1,10 @@
+HTTP/1.1 201 Created
+Content-Type: application/json; charset=utf-8
+Date: Mon, 12 Oct 2026 11:43:01 GMT
+Server: Kestrel
+Access-Control-Allow-Origin: http://localhost:5173
+Location: http://localhost:5019/api/Articles/2bc9ca3c-b1a0-423a-89f8-58ef7105e70c
+Transfer-Encoding: chunked
+Vary: Origin
+
+{"id":"2bc9ca3c-b1a0-423a-89f8-58ef7105e70c","titulo":"Teste","autores":"Eu","resumo":"Meu resumo de teste","palavrasChave":"a,b","area":"Computação","pdfS3Key":"articles/9fad0b5c-9159-42cd-862d-df670a6a3560-a.pdf","resumoTraduzido":null,"statusProcessamento":"pendente","criadoEm":"2026-10-12T11:43:00.5786769Z","atualizadoEm":null}
