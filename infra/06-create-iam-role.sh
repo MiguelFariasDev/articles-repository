@@ -2,6 +2,18 @@
 source "$(dirname "$0")/00-common.sh"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 
+# AWS Academy / Learner Lab não permite criar roles IAM: usa o instance profile pré-existente.
+# Uso: EXISTING_INSTANCE_PROFILE=LabInstanceProfile ./06-create-iam-role.sh (ou defina LAB=1)
+if [ "${LAB:-0}" = "1" ] && [ -z "${EXISTING_INSTANCE_PROFILE:-}" ]; then EXISTING_INSTANCE_PROFILE=LabInstanceProfile; fi
+if [ -n "${EXISTING_INSTANCE_PROFILE:-}" ]; then
+  aws iam get-instance-profile --instance-profile-name "$EXISTING_INSTANCE_PROFILE" >/dev/null \
+    || { echo "Instance profile $EXISTING_INSTANCE_PROFILE não encontrado." >&2; exit 1; }
+  save_state IAM_INSTANCE_PROFILE "$EXISTING_INSTANCE_PROFILE"
+  save_state IAM_PROFILE_EXTERNAL 1
+  log "OK: usando o instance profile existente $EXISTING_INSTANCE_PROFILE (nenhuma role criada)"
+  exit 0
+fi
+
 cat > "$TMP/trust.json" <<'JSON'
 {
   "Version": "2012-10-17",

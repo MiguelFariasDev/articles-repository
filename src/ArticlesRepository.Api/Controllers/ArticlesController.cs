@@ -142,22 +142,50 @@ public class ArticlesController : ControllerBase
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct) =>
         await _service.DeleteAsync(id, ct) ? NoContent() : NotFound();
 
-    /// <summary>Endpoint CPU-intensivo usado na demonstração do Auto Scaling.</summary>
+    // Limita o trabalho CPU-bound simultâneo ao nº de núcleos: sem isso, centenas de requisições
+    // acumulam na fila, saturam a instância por minutos e fazem o health check do ALB estourar.
+    private static readonly SemaphoreSlim LoadGate = new(Environment.ProcessorCount, Environment.ProcessorCount);
+
+    /// <summary>
+    /// Endpoint CPU-intensivo usado na demonstração do Auto Scaling. Respeita o cancelamento: se o cliente
+    /// desconecta, o cálculo para e a CPU é liberada.
+    /// </summary>
     [AllowAnonymous]
     [HttpGet("_load")]
-    public IActionResult Load([FromQuery] int iterations = 1_000_000)
+    public async Task<IActionResult> Load([FromQuery] int iterations = 1_000_000, CancellationToken ct = default)
     {
         iterations = Math.Clamp(iterations, 1, 50_000_000);
 
-        var stopwatch = Stopwatch.StartNew();
-        var buffer = new byte[32];
-        for (var i = 0; i < iterations; i++)
+        try
         {
-            buffer = SHA256.HashData(buffer);
+            await LoadGate.WaitAsync(ct);
+        }
+        catch (OperationCanceledException)
+        {
+            return StatusCode(StatusCodes.Status499ClientClosedRequest);
         }
 
-        stopwatch.Stop();
-        return Ok(new { elapsedMs = stopwatch.ElapsedMilliseconds, iterations });
+        try
+        {
+            var stopwatch = Stopwatch.StartNew();
+            var buffer = new byte[32];
+            for (var i = 0; i < iterations; i++)
+            {
+                if ((i & 0x3FFF) == 0 && ct.IsCancellationRequested)
+                {
+                    return StatusCode(StatusCodes.Status499ClientClosedRequest);
+                }
+
+                buffer = SHA256.HashData(buffer);
+            }
+
+            stopwatch.Stop();
+            return Ok(new { elapsedMs = stopwatch.ElapsedMilliseconds, iterations, instance = Environment.MachineName });
+        }
+        finally
+        {
+            LoadGate.Release();
+        }
     }
 
     private async Task<IActionResult> UpdateResult(

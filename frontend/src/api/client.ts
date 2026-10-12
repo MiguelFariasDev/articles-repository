@@ -1,7 +1,7 @@
 import type { Article, ArticleInput } from '../types'
 import { mockApi } from './mock'
 
-const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:5019'
+const BASE = import.meta.env.VITE_API_URL ?? ''
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
